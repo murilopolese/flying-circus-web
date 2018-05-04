@@ -3,7 +3,7 @@
   "authors": [
     "Murilo Polese <murilopolese@gmail.com>"
   ],
-  "description": "Webpage for Flying Circus IDE",
+  "description": "Web wrapper for Flying Circus (MicroPython IDE)",
   "main": "index.html",
   "license": "ISC",
   "homepage": "http://github.com/murilopolese/flying-circus-website",
@@ -15,7 +15,7 @@
     "tests"
   ],
   "dependencies": {
-    "flying-circus-ui": "^0.1.0",
-    "webrepl-client": "^0.1.0"
+    "flying-circus-ui": "murilopolese/flying-circus-ui",
+    "webrepl-client": "murilopolese/webrepl-client"
   }
 }
