@@ -15,7 +15,7 @@
     "tests"
   ],
   "dependencies": {
-    "flying-circus-ui": "murilopolese/flying-circus-ui",
-    "webrepl-client": "murilopolese/webrepl-client"
+    "flying-circus-ui": "murilopolese/flying-circus-ui#v0.1.0",
+    "webrepl-client": "murilopolese/webrepl-client#v0.1.0"
   }
 }
