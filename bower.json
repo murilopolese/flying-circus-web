@@ -1,0 +1,21 @@
+{
+  "name": "flying-circus-web",
+  "authors": [
+    "Murilo Polese <murilopolese@gmail.com>"
+  ],
+  "description": "Webpage for Flying Circus IDE",
+  "main": "index.html",
+  "license": "ISC",
+  "homepage": "http://github.com/murilopolese/flying-circus-website",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "flying-circus-ui": "^0.1.0",
+    "webrepl-client": "^0.1.0"
+  }
+}
