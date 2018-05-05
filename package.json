@@ -1,0 +1,22 @@
+{
+  "name": "flying-circus-web",
+  "description": "Web wrapper for Flying Circus (MicroPython IDE)",
+  "scripts": {
+    "start": "./node_modules/.bin/http-server",
+    "postinstall": "./node_modules/bower/bin/bower install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/murilopolese/flying-circus-web.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/murilopolese/flying-circus-web/issues"
+  },
+  "homepage": "https://github.com/murilopolese/flying-circus-web#readme",
+  "dependencies": {
+    "bower": "^1.8.4",
+    "http-server": "^0.11.1"
+  }
+}
