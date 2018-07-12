@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <title>Flying Circus - MicroPython IDE</title>
         <script src="bower_components/webcomponentsjs/webcomponents-loader.js"></script>
-        <script src="bower_components/webrepl-client/webrepl.js"></script>
+        <script src="bundle.js"></script>
         <link rel="import" href="bower_components/flying-circus-ui/flying-circus-ide.html">
         <style media="screen">
             body {
@@ -13,92 +13,5 @@
             }
         </style>
     </head>
-    <body>
-        <script>
-            (() => {
-                console.log('loaded')
-
-                let repl
-                let bus = new EventEmitter()
-
-                bus.on('connect', (port) => {
-                    console.log('cannot connect to serial via browser')
-                })
-                bus.on('load-available-devices', () => {
-                    bus.emit('available-devices', [])
-                })
-                
-                bus.on('connect-webrepl', (ipAddress) => {
-                    console.log('connect to webrepl', ipAddress)
-                    repl = new WebREPL({
-                        ip: ipAddress,
-                        autoconnect: false,
-                        password: '123456'
-                    })
-                    repl.onMessage = (msg) => {
-                        bus.emit('output', msg)
-                    }
-                    repl.onConnected = () => {
-                        bus.emit('connected')
-                    }
-                    repl.saveAs = (blob) => {
-                        let reader = new FileReader()
-                        reader.addEventListener('loadend', (e) => {
-                            const content = e.srcElement.result;
-                            bus.emit('load-code', content)
-                        });
-                        reader.readAsText(blob)
-                    }
-                    repl.connect()
-                })
-                bus.on('disconnect', () => {
-                    if (repl) {
-                        repl.disconnect()
-                    }
-                    bus.emit('disconnected')
-                })
-
-                bus.on('enter-raw-repl', () => {
-                    repl.enterRawRepl()
-                })
-                bus.on('exit-raw-repl', () => {
-                    repl.exitRawRepl()
-                })
-                bus.on('exec-raw', (code) => {
-                    repl.execRaw(code)
-                })
-                bus.on('send-stop', () => {
-                    repl.sendStop()
-                })
-                bus.on('send-reset', () => {
-                    repl.softReset()
-                })
-                bus.on('exec-from-string', (code) => {
-                    repl.execFromString(code)
-                })
-                bus.on('exec', (command) => {
-                    repl.exec(command)
-                })
-
-                bus.on('save-file', (data) => {
-                    let file = new File([data.code], data.filename, {
-                      type: "text/plain",
-                    });
-                    repl.sendFile(file)
-                })
-                bus.on('load-file', (filename) => {
-                    repl.loadFile(filename);
-                })
-                bus.on('remove-file', (filename) => {
-                    repl.removeFile(filename)
-                })
-
-                window.FlyingCircus = { bus }
-                let flyingCircus = document.createElement('flying-circus-ide')
-
-                document.body.appendChild(flyingCircus)
-
-            })()
-        </script>
-    </body>
+    <body><body>
 </html>
