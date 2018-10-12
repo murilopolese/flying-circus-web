@@ -4,7 +4,7 @@
   "scripts": {
     "start": "./node_modules/.bin/http-server",
     "postinstall": "./node_modules/bower/bin/bower install",
-    "watch": "./node_modules/.bin/watchify main.js -o bundle.js"
+    "watch": "./node_modules/.bin/watchify main.js -o bundle.js --exclude ws"
   },
   "repository": {
     "type": "git",
