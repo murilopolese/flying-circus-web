@@ -15,10 +15,19 @@ class WebsocketConnection extends EventEmitter {
         this.ENTER_RAW_REPL = '\r\x01' // CTRL-A
         this.EXIT_RAW_REPL = '\r\x04\r\x02' // CTRL-D + CTRL-B
     }
+    /**
+    * List all available WebREPL addresses
+    * @return {Promise} Resolves with an array of available WebREPL addresses
+    */
     static listAvailable() {
         // TODO: Find a way to list all the possible WebREPL ips on your network
         return Promise.resolve([])
     }
+    /**
+    * Opens a connection given an ip address and a password.
+    * @param {String} ip Ip address without protocols or ports
+    * @param {String} password MicroPython's WebREPL password
+    */
     open(ip, password) {
         this.ip = ip
         this.password = password
@@ -30,28 +39,90 @@ class WebsocketConnection extends EventEmitter {
             this.emit('disconnected')
         })
     }
+    /**
+    * Closes current connection.
+    */
     close() {
         this.emit('disconnected')
         if (this.ws) {
             this.ws.close()
         }
     }
+    /**
+    * Executes code in a string format. This code can contain multiple lines.
+    * @param {String} code String of code to be executed. Line breaks must be `\n`
+    */
     execute(code) {
-        this.stop()
-        this._enterRawRepl()
-        this._executeRaw(code)
-        this._exitRawRepl()
+        let interval = 30
+        let page = 80
+        let enterRawRepl = () => {
+            return new Promise((resolve) => {
+                this._enterRawRepl()
+                setTimeout(() => {
+                    resolve()
+                }, interval*2)
+            })
+        }
+        let executeRaw = () => {
+            return new Promise((resolve, reject) => {
+                let lines = code.split('\n')
+                let t = 0
+                this.emit('output', `\r\n`)
+                for(let i = 0; i < lines.length; i++) {
+                    let line = lines[i]
+                    if (line.length < page) {
+                        t += lines[i].length
+                        setTimeout(() => {
+                            this.evaluate(line+'\n')
+                            this.emit('output', `.`)
+                        }, t)
+                    } else {
+                        for(let j = 0; j < Math.ceil(line.length / page); j++) {
+                            t += page
+                            setTimeout(() => {
+                                this.evaluate(line.substr(j*1024, 1024))
+                                this.emit('output', `.`)
+                            }, t)
+                        }
+                    }
+                }
+                setTimeout(() => {
+                    resolve()
+                }, t+100)
+            })
+        }
+        let exitRawRepl = () => {
+            this._exitRawRepl()
+            return Promise.resolve()
+        }
+        return enterRawRepl()
+            .then(executeRaw)
+            .then(exitRawRepl)
     }
+    /**
+    * Evaluate a command/expression.
+    * @param {String} command Command/expression to be evaluated
+    */
     evaluate(command) {
         this.ws.send(command)
     }
+    /**
+    * Send a "stop" command in order to interrupt any running code. For serial
+    * REPL this command is "CTRL-C".
+    */
     stop() {
         this.evaluate(this.STOP)
     }
+    /**
+    * Send a command to "soft reset".
+    */
     softReset() {
         this.stop()
         this.evaluate(this.RESET)
     }
+    /**
+    * Prints on console the existing files on file system.
+    */
     listFiles() {
         const code = `print(' ')
 from os import listdir
@@ -59,6 +130,10 @@ print(listdir())
 `
         this.execute(code)
     }
+    /**
+    * Prints on console the content of a given file.
+    * @param {String} path File's path
+    */
     loadFile(path) {
         // WEBREPL_FILE = "<2sBBQLH64s"
         let rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
@@ -83,6 +158,11 @@ print(listdir())
         this.getFileData = new Uint8Array(0);
         this.evaluate(rec);
     }
+    /**
+    * Writes a given content to a file in the file system.
+    * @param {String} path File's path
+    * @param {String} content File's content
+    */
     writeFile(path, content) {
         // This looks wrong but it will be used later on by `_handleMessage`
         this.sendFileName = path
@@ -116,6 +196,10 @@ print(listdir())
         this.binaryState = 11
         this.evaluate(rec)
     }
+    /**
+    * Removes file on a given path
+    * @param {String} path File's path
+    */
     removeFile(path) {
         const pCode = `from os import remove
 remove('${path}')`
@@ -148,8 +232,10 @@ remove('${path}')`
                     // final response for put
                     if (this._decodeResp(data) == 0) {
                         console.log(`Sent ${this.sendFileName}, ${this.sendFileData.length} bytes`)
+                        this.emit('output', `Sent ${this.sendFileName}, ${this.sendFileData.length} bytes\r\n`)
                     } else {
                         console.log(`Failed sending ${this.sendFileName}`)
+                        this.emit('output', `Failed sending ${this.sendFileName}\r\n`)
                     }
                     this.binaryState = 0
                     break;
@@ -177,6 +263,7 @@ remove('${path}')`
                             new_buf.set(data.slice(2), this.getFileData.length)
                             this.getFileData = new_buf
                             console.log('Getting ' + this.getFileName + ', ' + this.getFileData.length + ' bytes')
+                            this.emit('output', 'Getting ' + this.getFileName + ', ' + this.getFileData.length + ' bytes\r\n')
 
                             var rec = new Uint8Array(1)
                             rec[0] = 0
@@ -191,6 +278,7 @@ remove('${path}')`
                     // final response
                     if (this._decodeResp(data) == 0) {
                         console.log(`Got ${this.getFileName}, ${this.getFileData.length} bytes`)
+                        this.emit('output', `Got ${this.getFileName}, ${this.getFileData.length} bytes\r\n`)
                         this._saveAs(this.getFileName, this.getFileData)
                     } else {
                         console.log(`Failed getting ${this.getFileName}`)
@@ -254,7 +342,12 @@ remove('${path}')`
         this.evaluate(this.EXIT_RAW_REPL)
     }
     _executeRaw(raw) {
-        this.evaluate(raw)
+        for(let i = 0; i < raw.length; i += 256) {
+            setTimeout(() => {
+                this.evaluate(raw.substr(i, 256))
+                console.log('sent', raw.substr(i, 256))
+            }, (1 + i) * 50)
+        }
         if (raw.indexOf('\n') == -1) {
             this.evaluate('\r')
         }
@@ -264,17 +357,7 @@ remove('${path}')`
 
 module.exports = WebsocketConnection
 
-},{"./websocketadapter.js":3,"events":5}],2:[function(require,module,exports){
-'use strict';
-
-module.exports = function () {
-  throw new Error(
-    'ws does not work in the browser. Browser clients must use the native ' +
-      'WebSocket object'
-  );
-};
-
-},{}],3:[function(require,module,exports){
+},{"./websocketadapter.js":2,"events":4}],2:[function(require,module,exports){
 const EventEmitter = require('events')
 
 class WebSocketAdapter extends EventEmitter {
@@ -323,9 +406,8 @@ class WebSocketAdapter extends EventEmitter {
 
 module.exports = WebSocketAdapter
 
-},{"events":5,"ws":2}],4:[function(require,module,exports){
+},{"events":4,"ws":undefined}],3:[function(require,module,exports){
 var WebsocketConnection = require('flying-circus-connection-websocket')
-var EventEmitter = require('events')
 
 window.onload = () => {
     console.log('loaded')
@@ -335,14 +417,14 @@ window.onload = () => {
     WebsocketConnection.prototype._saveAs = (path, data) => {
         flyingCircus.set('code', new TextDecoder('utf-8').decode(data))
     }
-    
+
     flyingCircus.WebsocketConnection = WebsocketConnection
 
     document.body.appendChild(flyingCircus)
 
 }
 
-},{"events":5,"flying-circus-connection-websocket":1}],5:[function(require,module,exports){
+},{"flying-circus-connection-websocket":1}],4:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -867,4 +949,4 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}]},{},[4]);
+},{}]},{},[3]);
