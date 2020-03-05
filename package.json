@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/murilopolese/flying-circus-web#readme",
   "dependencies": {
-    "bower": "^1.8.4",
+    "bower": "^1.8.8",
     "flying-circus-connection-websocket": "murilopolese/flying-circus-connection-websocket#1.x.x",
     "http-server": "^0.11.1"
   },
